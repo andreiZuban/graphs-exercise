@@ -13,6 +13,9 @@ public class Road {
         this.length = length;
     }
 
+    public Road() {
+    }
+
     public Town getTownA() {
         return townA;
     }
