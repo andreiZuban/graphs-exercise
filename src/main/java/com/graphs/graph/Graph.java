@@ -3,11 +3,14 @@ package com.graphs.graph;
 import com.graphs.road.Town;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.enumeration;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * A generic implementation of weighted unidirected graph
@@ -21,9 +24,21 @@ public class Graph <N> {
      */
     private final Map<N, Map<N, Integer>> nodes = new HashMap<>();
 
-    public void addEdge(N a, N b, int weight) {
-        addOneWayEdge(a, b, weight);
-        addOneWayEdge(b, a, weight);
+    public void addEdge(N from, N to, int weight) {
+        if(from == null || to == null) {
+            throw new IllegalArgumentException("No null nodes allowed.");
+        }
+
+        if(from.equals(to)) {
+            throw new IllegalArgumentException("Cannot connect same node with an edge.");
+        }
+
+        if(weight <= 0) {
+            throw new IllegalArgumentException("Weight cannot be negative or 0.");
+        }
+
+        addOneWayEdge(from, to, weight);
+        addOneWayEdge(to, from, weight);
     }
 
     public void clear() {
@@ -31,6 +46,8 @@ public class Graph <N> {
     }
 
     private void addOneWayEdge(N from, N to, int weight) {
+
+
         if(!nodes.containsKey(from)) {
             nodes.put(from, new HashMap<>());
         }
@@ -70,8 +87,6 @@ public class Graph <N> {
     }
 
     public boolean isConnected() {
-        boolean[] visited = new boolean[nodes.size()];
-
         N start = nodes.keySet().stream()
                 .findFirst()
                 .get();
@@ -116,5 +131,49 @@ public class Graph <N> {
         }
 
         return visited;
+    }
+
+    /**
+     * Implementation of Dijkstra's algorithm
+     * @param source node
+     * @param dest node
+     * @return shortest distance through graph from source to destination
+     *         considering weighted edges
+     */
+    public int shortestPath(N source, N dest) {
+        Map<N, Boolean> visited = new HashMap<>();
+        nodes.forEach((n,__) -> visited.put(n, false));
+        Map<N, Integer> tentativeDistance = nodes.keySet().stream()
+                .collect(toMap(identity(), __ -> Integer.MAX_VALUE));
+
+        tentativeDistance.put(source, 0);
+
+        N current = source;
+
+        do {
+            for(Map.Entry<N, Integer> entry : nodes.get(current).entrySet()) {
+                N child = entry.getKey();
+                int dist = entry.getValue();
+
+                if (!visited.get(child)) {
+                    int alternate = tentativeDistance.get(current) + dist;
+
+                    if (alternate < tentativeDistance.get(child)) {
+                        tentativeDistance.put(child, alternate);
+                    }
+                }
+            }
+
+            visited.put(current, true);
+
+            current = tentativeDistance.entrySet().stream()
+                    .filter(e-> ! visited.get(e.getKey()))
+                    .min(Comparator.comparingInt(Map.Entry::getValue))
+                    .map(Map.Entry::getKey)
+                    .get();
+
+        } while (current.equals(dest));
+
+        return tentativeDistance.get(dest);
     }
 }
