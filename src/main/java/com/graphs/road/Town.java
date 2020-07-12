@@ -6,10 +6,11 @@ public class Town {
         this.population = population;
     }
 
-    String name;
-    int population;
+    private final String name;
+    private final int population;
 
-    public String getName() {
+    @Override
+    public String toString() {
         return name;
     }
 

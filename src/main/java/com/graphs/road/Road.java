@@ -3,17 +3,14 @@ package com.graphs.road;
 public class Road {
     public static final String lengthMeasurementUnit = "Km";
 
-    Town townA;
-    Town townB;
-    int length;
+    private final Town townA;
+    private final Town townB;
+    private final int length;
 
     public Road(Town townA, Town townB, int length) {
         this.townA = townA;
         this.townB = townB;
         this.length = length;
-    }
-
-    public Road() {
     }
 
     public Town getTownA() {
@@ -26,9 +23,5 @@ public class Road {
 
     public int getLength() {
         return length;
-    }
-
-    public void setLength(int length) {
-        this.length = length;
     }
 }

@@ -1,13 +1,9 @@
 package com.graphs.graph;
 
-import com.graphs.road.Town;
-
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.enumeration;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
@@ -23,6 +19,10 @@ public class Graph <N> {
      * from destination node to corresponding wight of the road.
      */
     private final Map<N, Map<N, Integer>> nodes = new HashMap<>();
+
+    public void addNode(N t) {
+        nodes.put(t, new HashMap<>());
+    }
 
     public void addEdge(N from, N to, int weight) {
         if(from == null || to == null) {
@@ -46,14 +46,8 @@ public class Graph <N> {
     }
 
     private void addOneWayEdge(N from, N to, int weight) {
-
-
         if(!nodes.containsKey(from)) {
             nodes.put(from, new HashMap<>());
-        }
-
-        if(nodes.get(from).containsKey(to)) {
-            return;
         }
 
         nodes.get(from).put(to, weight);
@@ -72,13 +66,8 @@ public class Graph <N> {
                     + value.keySet().stream().map(Object::toString).collect(Collectors.joining(", "))));
     }
 
-    public Map<N, Map<N, Integer>> getWeightedGraph() {
-        return Map.copyOf(nodes);
-    }
-
-    public Map<N, Set<N>> getUnweightedGraph() {
-        return nodes.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().keySet()));
+    public Set<N> getNodes() {
+        return nodes.keySet();
     }
 
     public Set<N> getNeighboringNodes(N node) {
@@ -87,17 +76,24 @@ public class Graph <N> {
     }
 
     public boolean isConnected() {
+        if(nodes.isEmpty()) {
+            return false;
+        }
+
         N start = nodes.keySet().stream()
                 .findFirst()
                 .get();
 
-        return ! breadthFirstTraversal(start)
-                .containsValue(UNVISITED_NODE_DISTANCE);
+        return breadthFirstTraversal(start)
+                .size() == nodes.size();
     }
 
     public List<N> nodesWithinRangeOf(N node, int maxRange) {
-        return breadthFirstTraversal(node).entrySet().stream()
-                .filter(nIntegerEntry -> nIntegerEntry.getValue() <= maxRange)
+        Map<N, Integer> distance = shortestPath(node, node, true).getLowestCosts();
+
+        return distance.entrySet().stream()
+                .filter(nodeEntry -> nodeEntry.getValue() <= maxRange)
+                .filter(nodeEntry -> ! nodeEntry.getKey().equals(node))
                 .map(Map.Entry::getKey)
                 .collect(toList());
     }
@@ -110,9 +106,7 @@ public class Graph <N> {
      */
     public Map<N, Integer> breadthFirstTraversal(N start) {
         Deque<N> queue = new ArrayDeque<>();
-        Map<N, Integer> visited = new HashMap<>();
-
-        nodes.forEach((k,v) -> visited.put(k, UNVISITED_NODE_DISTANCE));
+        Map<N, Integer> visited = new LinkedHashMap<>();
 
         visited.put(start, 0);
         queue.add(start);
@@ -123,7 +117,7 @@ public class Graph <N> {
             System.out.println("vertex " + current.toString());
 
             nodes.get(current).forEach((vertex, distance) -> {
-                if(visited.get(vertex) == -1) {
+                if(!visited.containsKey(vertex)) {
                     visited.put(vertex, visited.get(current) + distance);
                     queue.add(vertex);
                 }
@@ -134,46 +128,59 @@ public class Graph <N> {
     }
 
     /**
-     * Implementation of Dijkstra's algorithm
+     * Implementation of Dijkstra's algorithm to find the lowest cost path from source
+     * to destination.
+     * Supports efficient search that stops when destination node is reached. Also supports
+     * full search which stops when all nodes were visited.
+     *
      * @param source node
      * @param dest node
+     * @param fullSearch boolean to specify whether search should end when all nodes ar visited
+     *                   or when destination node is found.
      * @return shortest distance through graph from source to destination
      *         considering weighted edges
      */
-    public int shortestPath(N source, N dest) {
-        Map<N, Boolean> visited = new HashMap<>();
-        nodes.forEach((n,__) -> visited.put(n, false));
-        Map<N, Integer> tentativeDistance = nodes.keySet().stream()
+    public ShortestPath<N> shortestPath(N source, N dest, boolean fullSearch) {
+        final Set<N> visited = new LinkedHashSet<>();
+        Map<N, Integer> distance = nodes.keySet().stream()
                 .collect(toMap(identity(), __ -> Integer.MAX_VALUE));
 
-        tentativeDistance.put(source, 0);
+        distance.put(source, 0);
 
-        N current = source;
+        while (!visited.contains(dest)
+                || ( fullSearch && visited.size() != nodes.size())) {
+            N current = distance.entrySet().stream()
+                .filter(e -> !visited.contains(e.getKey()))
+                .min(Comparator.comparingInt(Map.Entry::getValue))
+                .map(Map.Entry::getKey)
+                .orElseThrow(() -> new RuntimeException("Expected to find a node here"));
 
-        do {
-            for(Map.Entry<N, Integer> entry : nodes.get(current).entrySet()) {
-                N child = entry.getKey();
-                int dist = entry.getValue();
+            nodes.get(current).forEach((child, dist) -> {
+                if (!visited.contains(child)) {
+                    int alternate = distance.get(current) + dist;
 
-                if (!visited.get(child)) {
-                    int alternate = tentativeDistance.get(current) + dist;
-
-                    if (alternate < tentativeDistance.get(child)) {
-                        tentativeDistance.put(child, alternate);
+                    if (alternate < distance.get(child)) {
+                        distance.put(child, alternate);
                     }
                 }
-            }
+            });
 
-            visited.put(current, true);
+            visited.add(current);
+        }
 
-            current = tentativeDistance.entrySet().stream()
-                    .filter(e-> ! visited.get(e.getKey()))
-                    .min(Comparator.comparingInt(Map.Entry::getValue))
-                    .map(Map.Entry::getKey)
-                    .get();
+        ShortestPath<N> shortestPath = new ShortestPath<>();
+        shortestPath.setCost(distance.get(dest));
+        shortestPath.setNodes(visited);
+        shortestPath.setLowestCosts(distance);
 
-        } while (current.equals(dest));
+        return shortestPath;
+    }
 
-        return tentativeDistance.get(dest);
+    public boolean isEmpty() {
+        return nodes.isEmpty();
+    }
+
+    public int getSize() {
+        return nodes.size();
     }
 }

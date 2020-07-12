@@ -2,22 +2,18 @@ package com.graphs;
 
 import com.graphs.graph.Graph;
 
-import java.util.Arrays;
-import java.util.List;
-
 public class Main {
     public static void main(String[] args) {
-        var g = new Graph<Integer>();
+        var graph = new Graph<Integer>();
 
-        g.addEdge(0, 1, 1);
-        g.addEdge(0, 2, 2);
-        g.addEdge(1, 2, 3);
-        g.addEdge(2, 3, 50);;
-        g.addEdge(4,5,6);
-        g.addEdge(5,6,20);
-        g.addEdge(3,6,100);
-        g.addEdge(2, 6, 1);
-        g.addEdge(6, 3, 1);
+        graph.addEdge(0, 1, 1);
+        graph.addEdge(0, 2, 2);
+        graph.addEdge(1, 2, 3);
+        graph.addEdge(2, 3, 50);
+        graph.addEdge(4,5,6);
+        graph.addEdge(5,6,20);
+        graph.addEdge(2, 6, 1);
+        graph.addEdge(6, 3, 1);
 
 //        g.printGraphAdjacency();
 //
@@ -32,6 +28,5 @@ public class Main {
 //        System.out.println(g.isConnected());
 //
 //
-        System.out.println(g.shortestPath(0,3));
     }
 }
