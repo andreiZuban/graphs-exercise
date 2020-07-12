@@ -1,4 +1,4 @@
-package com.graphs.graph;
+package com.graphs.road;
 
 import com.graphs.road.FullRoad;
 import com.graphs.road.Road;
